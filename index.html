@@ -1,0 +1,40 @@
+// 1. إعداد العميل للاتصال بخوادم Agora
+const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+let localAudioTrack;
+
+// ضع الـ App ID الخاص بك هنا (تم وضعه بالفعل)
+const appId = "A6d9eb4d40114314bda5d526227acd5a"; 
+const channel = "chat_room_1"; // اسم الغرفة
+
+async function joinCall() {
+    try {
+        // 2. الانضمام للقناة عبر الإنترنت
+        await client.join(appId, channel, null);
+        
+        // 3. إنشاء مسار الصوت (فتح المايك)
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        
+        // 4. نشر الصوت ليسمعه الآخرون
+        await client.publish([localAudioTrack]);
+        
+        document.getElementById('status').innerText = "أنت متصل الآن! صوتك مسموع 🎤";
+        console.log("تم الاتصال بنجاح");
+    } catch (error) {
+        console.error("خطأ في الاتصال:", error);
+        alert("تأكد من إعطاء إذن المايك للمتصفح");
+    }
+}
+
+// 5. الاستماع لأي شخص آخر يدخل الغرفة وتشغيل صوته تلقائياً
+client.on("user-published", async (user, mediaType) => {
+    await client.subscribe(user, mediaType);
+    if (mediaType === "audio") {
+        user.audioTrack.play();
+    }
+});
+
+async function leaveCall() {
+    localAudioTrack.close(); // غلق المايك
+    await client.leave(); // الخروج من السيرفر
+    document.getElementById('status').innerText = "تم قطع الاتصال.";
+}
